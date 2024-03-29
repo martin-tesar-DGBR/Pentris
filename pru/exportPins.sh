@@ -1,0 +1,12 @@
+config-pin P8_46 pruout
+config-pin P8_45 pruout
+config-pin P8_44 pruout
+config-pin P8_43 pruout
+config-pin P8_42 pruout
+config-pin P8_41 pruout
+config-pin P8_40 pruout
+config-pin P8_39 pruout
+config-pin P8_30 pruout
+config-pin P8_29 pruout
+config-pin P8_28 pruout
+config-pin P8_27 pruout
