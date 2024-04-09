@@ -27,6 +27,8 @@ uint8_t piece_colours[NUM_PIECES + 2] = {
     0x00,
     0x00
 };
+//if the ghost piece colour is too bright I can try modifying the display to allow darker colours
+#define GHOST_PIECE_COLOUR 0x29
 
 //ordinarily the display is horizontally arranged like the following:
 //         col 0  ...  col 31
@@ -50,11 +52,6 @@ void renderer_draw(volatile uint8_t *buffer) {
         buffer[i] = 0;
     }
     const enum PieceName *board = pentris_get_board();
-    uint8_t current_piece_data[MAX_PIECE_DATA_SIZE];
-    enum PieceName name;
-    int pos_x, pos_y;
-    int current_piece_size;
-    pentris_get_piece(current_piece_data, &name, &pos_x, &pos_y, &current_piece_size);
     enum PieceName piece_preview[PREVIEW_LENGTH];
     int num_previews = pentris_get_queue(piece_preview, PREVIEW_LENGTH);
     //draw board
@@ -63,7 +60,31 @@ void renderer_draw(volatile uint8_t *buffer) {
             set_pixel(buffer, i, j, piece_colours[board[i * BOARD_WIDTH + j]]);
         }
     }
-    //draw current piece
+
+    uint8_t current_piece_data[MAX_PIECE_DATA_SIZE];
+    enum PieceName name;
+    int pos_x, pos_y;
+    int current_piece_size;
+    pentris_get_piece(current_piece_data, &name, &pos_x, &pos_y, &current_piece_size);
+
+    //draw ghost piece before the actual piece (UNTESTED PLEASE TEST)
+    int ghost_pos_x = pos_x;
+    int ghost_pos_y = pos_y;
+    while (pentris_is_valid_placement(current_piece_data, current_piece_size, ghost_pos_x, ghost_pos_y)) {
+        ghost_pos_y--;
+    }
+    for (int i = 0; i < current_piece_size; i++) {
+        if (ghost_pos_y + i >= BOARD_HEIGHT) {
+            continue;
+        }
+        for (int j = 0; j < current_piece_size; j++) {
+            if (current_piece_data[i * current_piece_size + j]) {
+                set_pixel(buffer, ghost_pos_y + i, ghost_pos_x + j, GHOST_PIECE_COLOUR);
+            }
+        }
+    }
+
+    //draw current piece over ghost piece
     for (int i = 0; i < current_piece_size; i++) {
         //do not let the piece stick above the 20x10 matrix
         if (pos_y + i >= BOARD_HEIGHT) {
@@ -76,9 +97,11 @@ void renderer_draw(volatile uint8_t *buffer) {
             }
         }
     }
+    
     //draw queue
     for (int preview = 0; preview < num_previews; preview++) {
         enum PieceName current_preview_piece = piece_preview[preview];
+        //reuses current_piece_data from earlier (can rewrite for clarity if needed)
         int preview_size = pentris_get_piece_data(current_preview_piece, NORTH, current_piece_data);
         //center the piece as best as possible within the 5 pixels width we have
         int horizontal_offset = PREVIEW_HORIZONTAL_OFFSET + (6 - preview_size) / 2;

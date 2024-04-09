@@ -1,7 +1,6 @@
 #include "pentris.h"
 
 #include <string.h>
-#include <stdio.h>
 
 #include "random.h"
 
@@ -217,10 +216,6 @@ void pentris_init() {
     gravity_accumulator = 0;
 }
 
-void pentris_cleanup() {
-
-}
-
 void pentris_input(enum PentrisInput input) {
     switch (input) {
         case P_LEFT:
@@ -245,7 +240,7 @@ void pentris_input(enum PentrisInput input) {
 }
 
 //checks whether the given piece data with bottom left corner at (x, y) is a valid placement on the board
-int pentris_is_valid_placement(uint8_t *piece_data, int size, int x, int y) {
+int pentris_is_valid_placement(const uint8_t *piece_data, int size, int x, int y) {
     int is_valid = 1;
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
@@ -405,7 +400,8 @@ static void rotate_cw() {
 
 //there's a lot of output arguments but I think the names explain what they do
 void pentris_tick(int *num_lines_cleared, int *is_game_over) {
-    *num_lines_cleared = 0;
+    //-1 for no value, 0 for piece placed, > 0 for number of lines cleared
+    *num_lines_cleared = -1;
 
     if (((input_flags & MOVE_LEFT_MASK) != 0) && ((input_flags & MOVE_RIGHT_MASK) == 0)) {
         move_left();
@@ -510,8 +506,8 @@ int pentris_get_piece_data(enum PieceName piece, enum Orientation orientation, u
     return piece_size;
 }
 
-void pentris_get_piece(uint8_t *piece, enum PieceName *name, int *pos_x, int *pos_y, int *size) {
-    *size = pentris_get_piece_data(current_piece.name, current_piece.orientation, piece);
+void pentris_get_piece(uint8_t *piece_data, enum PieceName *name, int *pos_x, int *pos_y, int *size) {
+    *size = pentris_get_piece_data(current_piece.name, current_piece.orientation, piece_data);
     *name = current_piece.name;
     *pos_x = current_piece.posX;
     *pos_y = current_piece.posY;

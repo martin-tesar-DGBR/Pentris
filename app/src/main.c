@@ -9,7 +9,6 @@
 
 #include "hal/joystick.h"
 #include "hal/display_linux.h"
-#include "hal/pru_shared.h"
 #include "hal/util.h"
 
 int main() {
@@ -45,6 +44,7 @@ int main() {
             if (game_over) {
                 //TODO: get a better game over
                 //(show game over screen, prompt input to reset/exit?)
+                //to reset call pentris_init(), input_init(), score_init(), set acc to 0
                 //for now break out of the game loop
                 is_running = 0;
                 continue;
@@ -58,9 +58,7 @@ int main() {
         prev_time = current_time;
         sleep_ms(3);
     }
-    
-    input_cleanup();
-    pentris_cleanup();
+
     display_cleanup();
     joystick_cleanup();
     return 0;
