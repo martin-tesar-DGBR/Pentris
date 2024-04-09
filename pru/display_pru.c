@@ -99,6 +99,7 @@ static void ledMatrix_setColourBottom(uint8_t colour, int frame) {
     set_mask(B2_MASK, blue_val);
 }
 
+//draws all 0s to display when buffer is NULL (so you don't get blinded when the program shuts down)
 static void display_draw(volatile uint8_t *buffer) {
     for (int rowNum = 0; rowNum < DISPLAY_ROWS / 2; rowNum++) {
         __R30 |= OE_MASK;

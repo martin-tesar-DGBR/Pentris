@@ -4,6 +4,7 @@
 
 #include "pentris.h"
 #include "input.h"
+#include "score.h"
 #include "renderer.h"
 
 #include "hal/joystick.h"
@@ -16,6 +17,7 @@ int main() {
     volatile uint8_t *buffer = display_init();
     pentris_init();
     input_init();
+    score_init();
 
     long long prev_time = get_time_ms();
     long long acc = 0;
@@ -26,6 +28,7 @@ int main() {
         long long delta_time = current_time - prev_time;
         acc += delta_time;
 
+        //TODO: replace with actual inputs
         enum JoystickInput input = joystick_get_input();
         input_update(P_ROTATE_CCW, delta_time, input & JS_UP);
         input_update(P_RIGHT, delta_time, input & JS_RIGHT);
@@ -35,8 +38,17 @@ int main() {
             is_running = 0;
         }
 
-        if (acc >= 50) {
-            pentris_tick();
+        while (acc >= 50) {
+            int lines_cleared, game_over;
+            pentris_tick(&lines_cleared, &game_over);
+            score_line_clear(lines_cleared);
+            if (game_over) {
+                //TODO: get a better game over
+                //(show game over screen, prompt input to reset/exit?)
+                //for now break out of the game loop
+                is_running = 0;
+                continue;
+            }
             acc -= 50;
         }
         

@@ -11,6 +11,7 @@
 //names taken from https://en.wikipedia.org/wiki/Pentomino
 //N is flipped from the version seen on wikipedia
 //<name>f denotes the mirror image of the respective version
+//used for both representing pieces in the queue and on the board
 enum PieceName {
     I,  T,  U,  V,  W,  X,
     F,  L,  N,  P,  Y,  Z,
@@ -51,7 +52,9 @@ void pentris_init();
 void pentris_cleanup();
 
 void pentris_input(enum PentrisInput input);
-void pentris_tick();
+void pentris_tick(int *num_lines_cleared, int *is_game_over);
+
+int pentris_is_valid_placement(uint8_t *piece_data, int size, int x, int y);
 
 const enum PieceName *pentris_get_board();
 int pentris_get_piece_data(enum PieceName piece, enum Orientation orientation, uint8_t *dst);

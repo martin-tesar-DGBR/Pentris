@@ -7,15 +7,28 @@
 
 #include "hal/util.h"
 
-#define QUEUE_CAPACITY (2 * NUM_PIECES)
+#define QUEUE_CAPACITY (6 * NUM_PIECES)
+#define RANDOMIZER_90_BAG_LEN (5 * NUM_PIECES)
+#define TICKS_PER_GRAVITY 20
 //the visible "board" is 20 tiles high while the game extends the board above the visible play area
 #define MATRIX_HEIGHT (2 * BOARD_HEIGHT)
 #define MATRIX_WIDTH BOARD_WIDTH
 
+//dimensions for each piece
 const int piece_data_size[NUM_PIECES] = {
     5, 3, 3, 3, 3, 3,
     3, 4, 4, 3, 4, 3,
     3, 4, 4, 3, 4, 3
+};
+
+//we want to spawn each piece such that they all align to the same row
+//e.g. if we spawn all pieces such that their y_pos is 17,
+//the I piece would appear to spawn 2 tiles above where the T piece would spawn
+//you could technically offset by piece_size - 3 instead of having this array but that seems unintuitive
+const int piece_spawn_y_offset[NUM_PIECES] = {
+    2, 0, 0, 0, 0, 0,
+    0, 1, 1, 0, 1, 0,
+    0, 1, 1, 0, 1, 0
 };
 
 const uint8_t pieces[NUM_PIECES][MAX_PIECE_DATA_SIZE] = {
@@ -129,6 +142,7 @@ const uint8_t pieces[NUM_PIECES][MAX_PIECE_DATA_SIZE] = {
 //  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
 static enum PieceName board[MATRIX_WIDTH * MATRIX_HEIGHT];
 static piece_t current_piece;
+//information to randomize pieces
 uint32_t queue_rng_state;
 static enum PieceName queuePieces[NUM_PIECES];
 //circular buffer of pieces to place on the board
@@ -136,6 +150,8 @@ static enum PieceName queue[QUEUE_CAPACITY];
 static int queue_length;
 static int queue_head;
 static int queue_tail;
+
+static int gravity_accumulator;
 
 #define MOVE_LEFT_MASK 0x01
 #define MOVE_RIGHT_MASK 0x02
@@ -145,33 +161,40 @@ static int queue_tail;
 #define HARD_DROP_MASK 0x20
 static uint8_t input_flags;
 
+//shuffles the 5 * 18 pieces and inserts them into the piece queue
 static void refill_queue() {
     //do not refill the queue if doing so will overflow the buffer
-    if (queue_length + NUM_PIECES >= QUEUE_CAPACITY) {
+    if (queue_length + RANDOMIZER_90_BAG_LEN >= QUEUE_CAPACITY) {
         return;
     }
 
     queue_rng_state = shuffle(queuePieces, sizeof(*queuePieces), NUM_PIECES, queue_rng_state);
-    for (int i = 0; i < NUM_PIECES; i++) {
+    for (int i = 0; i < RANDOMIZER_90_BAG_LEN; i++) {
         queue[queue_head] = queuePieces[i];
         queue_head = (queue_head + 1) % QUEUE_CAPACITY;
     }
-    queue_length += NUM_PIECES;
+    queue_length += RANDOMIZER_90_BAG_LEN;
 }
 
 static void dequeue_piece() {
-    //dequeue from shuffled queue instead of hardcoding it here
-    current_piece.posX = 0;
-    current_piece.posY = 15;
     current_piece.name = queue[queue_tail];
-    current_piece.orientation = NORTH;
     queue_tail = (queue_tail + 1) % QUEUE_CAPACITY;
     queue_length -= 1;
+    //set x position such that the piece is centered
+    //..xxxxx... 5 wide piece
+    //...xxxx... 4 wide piece
+    //...xxx.... 3 wide piece
+    int piece_size = piece_data_size[current_piece.name];
+    current_piece.posX = (BOARD_WIDTH - piece_size) / 2;
+    current_piece.posY = 17 - piece_spawn_y_offset[current_piece.name];
+    current_piece.orientation = NORTH;
+    //we want at least the number of previews + 1 in the queue at all times (6 was chosen arbitrarily)
     if (queue_length < 6) {
         refill_queue();
     }
 }
 
+//can be used to reinitialize the game after it's been initialized once
 void pentris_init() {
     input_flags = 0;
 
@@ -179,16 +202,19 @@ void pentris_init() {
         board[i] = EMPTY_PIECE;
     }
     
-    //for debugging purposes the piece queue is deterministic on the seed
+    //for debugging purposes the piece queue is deterministic on the seed, want to change it to use time on release
     queue_rng_state = 27;
-    for (int i = 0; i < NUM_PIECES; i++) {
-        queuePieces[i] = i;
+    //fill queue with 5 of each piece
+    for (int i = 0; i < RANDOMIZER_90_BAG_LEN; i++) {
+        queuePieces[i] = i % NUM_PIECES;
     }
     queue_length = 0;
     queue_head = 0;
     queue_tail = 0;
     refill_queue();
     dequeue_piece();
+
+    gravity_accumulator = 0;
 }
 
 void pentris_cleanup() {
@@ -215,12 +241,11 @@ void pentris_input(enum PentrisInput input) {
         case P_HARD_DROP:
         input_flags |= HARD_DROP_MASK;
         break;
-        default:
-        break;
     }
 }
 
-static int is_valid_placement(uint8_t *piece_data, int size, int x, int y) {
+//checks whether the given piece data with bottom left corner at (x, y) is a valid placement on the board
+int pentris_is_valid_placement(uint8_t *piece_data, int size, int x, int y) {
     int is_valid = 1;
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
@@ -244,7 +269,7 @@ static int is_valid_placement(uint8_t *piece_data, int size, int x, int y) {
 static void move_left() {
     uint8_t piece_data[MAX_PIECE_DATA_SIZE];
     int size = pentris_get_piece_data(current_piece.name, current_piece.orientation, piece_data);
-    int is_valid = is_valid_placement(piece_data, size, current_piece.posX - 1, current_piece.posY);
+    int is_valid = pentris_is_valid_placement(piece_data, size, current_piece.posX - 1, current_piece.posY);
 
     if (is_valid) {
         current_piece.posX = current_piece.posX - 1;
@@ -254,24 +279,28 @@ static void move_left() {
 static void move_right() {
     uint8_t piece_data[MAX_PIECE_DATA_SIZE];
     int size = pentris_get_piece_data(current_piece.name, current_piece.orientation, piece_data);
-    int is_valid = is_valid_placement(piece_data, size, current_piece.posX + 1, current_piece.posY);
+    int is_valid = pentris_is_valid_placement(piece_data, size, current_piece.posX + 1, current_piece.posY);
 
     if (is_valid) {
         current_piece.posX = current_piece.posX + 1;
     }
 }
 
-static void move_down() {
+//returns whether moving down was successful
+static int move_down() {
     uint8_t piece_data[MAX_PIECE_DATA_SIZE];
     int size = pentris_get_piece_data(current_piece.name, current_piece.orientation, piece_data);
-    int is_valid = is_valid_placement(piece_data, size, current_piece.posX, current_piece.posY - 1);
+    int is_valid = pentris_is_valid_placement(piece_data, size, current_piece.posX, current_piece.posY - 1);
 
     if (is_valid) {
         current_piece.posY = current_piece.posY - 1;
+        return 1;
     }
+    return 0;
 }
 
-static void clear_lines() {
+//returns the number of cleared lines while clearing lines
+static int clear_lines() {
     int full_rows[5];
     int num_full_rows = 0;
     for (int row = 0; row < MATRIX_HEIGHT; row++) {
@@ -289,11 +318,13 @@ static void clear_lines() {
     }
 
     if (num_full_rows == 0) {
-        return;
+        return 0;
     }
 
     //copy down each row
     //if row is above a cleared line, we have to copy it down further
+    //there's technically a bug where the top n rows are not set to the empty row,
+    //but the player is unlikely to reach that area
     int num_rows_copy = 0;
     for (int i = full_rows[num_rows_copy] + 1; i < MATRIX_HEIGHT; i++) {
         if (num_rows_copy < num_full_rows && i > full_rows[num_rows_copy]) {
@@ -303,19 +334,13 @@ static void clear_lines() {
             memcpy(&board[(i - num_rows_copy) * MATRIX_WIDTH], &board[i * MATRIX_WIDTH], sizeof(*board) * MATRIX_WIDTH);
         }
     }
+
+    return num_full_rows;
 }
 
-static void drop_down_and_place() {
-    uint8_t piece_data[MAX_PIECE_DATA_SIZE];
-    int size = pentris_get_piece_data(current_piece.name, current_piece.orientation, piece_data);
-    int is_valid = 1;
-    while (is_valid) {
-        is_valid = is_valid_placement(piece_data, size, current_piece.posX, current_piece.posY - 1);
-        if (is_valid) {
-            current_piece.posY = current_piece.posY - 1;
-        }
-    }
-
+//place the current piece as it is onto the board, get the next piece from the queue and return the number of lines cleared
+//NOTE: can be used while the piece is floating in midair, beware of usage
+static void place_piece(uint8_t *piece_data, int size, int *num_lines_cleared) {
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
             if (piece_data[i * size + j]) {
@@ -324,15 +349,43 @@ static void drop_down_and_place() {
         }
     }
 
-    clear_lines();
+    *num_lines_cleared = clear_lines();
     dequeue_piece();
+}
+
+//effectively hard drop, moves piece down until it can't be moved anymore and places the piece
+static void drop_down_and_place(int *num_lines_cleared) {
+    uint8_t piece_data[MAX_PIECE_DATA_SIZE];
+    int size = pentris_get_piece_data(current_piece.name, current_piece.orientation, piece_data);
+    int is_valid = 1;
+    while (is_valid) {
+        is_valid = pentris_is_valid_placement(piece_data, size, current_piece.posX, current_piece.posY - 1);
+        if (is_valid) {
+            current_piece.posY = current_piece.posY - 1;
+        }
+    }
+
+    place_piece(piece_data, size, num_lines_cleared);
+}
+
+//apply one instance of gravity
+//one instance of gravity moves the piece down one tile if possible, or places it otherwise
+static void apply_gravity(int *num_lines_cleared) {
+    uint8_t piece_data[MAX_PIECE_DATA_SIZE];
+    int size = pentris_get_piece_data(current_piece.name, current_piece.orientation, piece_data);
+    if (pentris_is_valid_placement(piece_data, size, current_piece.posX, current_piece.posY - 1)) {
+        current_piece.posY = current_piece.posY - 1;
+    }
+    else {
+        place_piece(piece_data, size, num_lines_cleared);
+    }
 }
 
 static void rotate_ccw() {
     enum Orientation new_orientation = (current_piece.orientation + 3) % NUM_ORIENTATION;
     uint8_t piece_data[MAX_PIECE_DATA_SIZE];
     int size = pentris_get_piece_data(current_piece.name, new_orientation, piece_data);
-    int is_valid = is_valid_placement(piece_data, size, current_piece.posX, current_piece.posY);
+    int is_valid = pentris_is_valid_placement(piece_data, size, current_piece.posX, current_piece.posY);
 
     if (is_valid) {
         current_piece.orientation = new_orientation;
@@ -343,14 +396,17 @@ static void rotate_cw() {
     enum Orientation new_orientation = (current_piece.orientation + 1) % NUM_ORIENTATION;
     uint8_t piece_data[MAX_PIECE_DATA_SIZE];
     int size = pentris_get_piece_data(current_piece.name, new_orientation, piece_data);
-    int is_valid = is_valid_placement(piece_data, size, current_piece.posX, current_piece.posY);
+    int is_valid = pentris_is_valid_placement(piece_data, size, current_piece.posX, current_piece.posY);
 
     if (is_valid) {
         current_piece.orientation = new_orientation;
     }
 }
 
-void pentris_tick() {
+//there's a lot of output arguments but I think the names explain what they do
+void pentris_tick(int *num_lines_cleared, int *is_game_over) {
+    *num_lines_cleared = 0;
+
     if (((input_flags & MOVE_LEFT_MASK) != 0) && ((input_flags & MOVE_RIGHT_MASK) == 0)) {
         move_left();
     }
@@ -363,12 +419,32 @@ void pentris_tick() {
     if (((input_flags & ROTATE_CW_MASK) != 0) && ((input_flags & ROTATE_CCW_MASK) == 0)) {
         rotate_cw();
     }
+    //when soft dropping, we want to reset the gravity accumulator so we don't get double dropping situations
+    //however, we don't want to reset it every time we move down or the player can stall at the bottom of the board
+    //therefore we only reset the accumulator when the piece was successfully moved down
     if (input_flags & SOFT_DROP_MASK) {
-        move_down();
+        if (move_down()) {
+            gravity_accumulator = 0;
+        }
     }
+
+    //I apologize for nested function hell in advance.
     if (input_flags & HARD_DROP_MASK) {
-        drop_down_and_place();
+        drop_down_and_place(num_lines_cleared);
+        gravity_accumulator = 0;
     }
+    else {
+        gravity_accumulator++;
+        if (gravity_accumulator >= TICKS_PER_GRAVITY) {
+            apply_gravity(num_lines_cleared);
+            gravity_accumulator = 0;
+        }
+    }
+
+    //check if the current piece is invalid (by spawning into another piece) and end the game if so
+    uint8_t piece_data[MAX_PIECE_DATA_SIZE];
+    int piece_size = pentris_get_piece_data(current_piece.name, current_piece.orientation, piece_data);
+    *is_game_over = !pentris_is_valid_placement(piece_data, piece_size, current_piece.posX, current_piece.posY);
 
     input_flags = 0;
 }
@@ -441,7 +517,7 @@ void pentris_get_piece(uint8_t *piece, enum PieceName *name, int *pos_x, int *po
     *pos_y = current_piece.posY;
 }
 
-//request the first max_capacity members of the piece queue,
+//request the first max_capacity members of the piece queue
 //returns the actual number of pieces read (should always be equal if nothing goes wrong)
 int pentris_get_queue(enum PieceName *dst, int max_capacity) {
     int num_read = queue_length < max_capacity ? queue_length : max_capacity;
