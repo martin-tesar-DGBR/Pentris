@@ -7,13 +7,17 @@
 #include "score.h"
 #include "renderer.h"
 
+#include "hal/gpio.h"
+#include "hal/button.h"
 #include "hal/joystick.h"
 #include "hal/display_linux.h"
 #include "hal/util.h"
 
 int main() {
-    joystick_init();
     volatile uint8_t *buffer = display_init();
+    gpio_init();
+    button_init();
+    joystick_init();
     pentris_init();
     input_init();
     score_init();
@@ -27,15 +31,17 @@ int main() {
         long long delta_time = current_time - prev_time;
         acc += delta_time;
 
-        //TODO: replace with actual inputs
-        enum JoystickInput input = joystick_get_input();
-        input_update(P_ROTATE_CCW, delta_time, input & JS_UP);
-        input_update(P_RIGHT, delta_time, input & JS_RIGHT);
-        input_update(P_LEFT, delta_time, input & JS_LEFT);
-        input_update(P_HARD_DROP, delta_time, input & JS_DOWN);
-        if (input & JS_PUSHED) {
-            is_running = 0;
-        }
+        //TODO: replace with actual inputs (TEST THESE)
+        int btn_left, btn_right;
+        int joystick_x, joystick_y;
+        button_read(&btn_left, &btn_right);
+        joystick_read(&joystick_x, &joystick_y);
+        input_update(P_ROTATE_CCW, delta_time, btn_left);
+        input_update(P_ROTATE_CW, delta_time, btn_right);
+        input_update(P_LEFT, delta_time, joystick_x < 0);
+        input_update(P_RIGHT, delta_time, joystick_x > 0);
+        input_update(P_SOFT_DROP, delta_time, joystick_y < 0);
+        input_update(P_HARD_DROP, delta_time, joystick_y > 0);
 
         while (acc >= 50) {
             int lines_cleared, game_over;
@@ -59,7 +65,8 @@ int main() {
         sleep_ms(3);
     }
 
-    display_cleanup();
     joystick_cleanup();
+    gpio_cleanup();
+    display_cleanup();
     return 0;
 }
