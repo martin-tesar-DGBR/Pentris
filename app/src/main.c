@@ -13,6 +13,8 @@
 #include "hal/display_linux.h"
 #include "hal/util.h"
 
+#define GAMEOVER_WAIT_INPUT 3000
+
 int main() {
     volatile uint8_t *buffer = display_init();
     gpio_init();
@@ -31,36 +33,45 @@ int main() {
         long long delta_time = current_time - prev_time;
         acc += delta_time;
 
-        //TODO: replace with actual inputs (TEST THESE)
         int btn_left, btn_right;
         int joystick_x, joystick_y;
         button_read(&btn_left, &btn_right);
         joystick_read(&joystick_x, &joystick_y);
-        input_update(P_ROTATE_CCW, delta_time, btn_left);
-        input_update(P_ROTATE_CW, delta_time, btn_right);
-        input_update(P_LEFT, delta_time, joystick_x < 0);
-        input_update(P_RIGHT, delta_time, joystick_x > 0);
-        input_update(P_SOFT_DROP, delta_time, joystick_y < 0);
-        input_update(P_HARD_DROP, delta_time, joystick_y > 0);
 
-        while (acc >= 50) {
-            int lines_cleared, game_over;
-            pentris_tick(&lines_cleared, &game_over);
-            score_line_clear(lines_cleared);
-            if (game_over) {
-                //TODO: get a better game over
-                //(show game over screen, prompt input to reset/exit?)
-                //to reset call pentris_init(), input_init(), score_init(), set acc to 0
-                //for now break out of the game loop
-                is_running = 0;
-                continue;
+        if (pentris_is_gameover()) {
+            renderer_draw_gameover(buffer, acc);
+            //exit
+            if (acc > GAMEOVER_WAIT_INPUT && (joystick_x || joystick_y)) {
+                break;
             }
-            acc -= 50;
+            //reset
+            if (acc > GAMEOVER_WAIT_INPUT && (btn_left || btn_right)) {
+                pentris_init();
+                input_init();
+                score_init();
+                acc = 0;
+                sleep_ms(300);
+            }
         }
-        
-        renderer_draw(buffer);
-        buffer = display_buffer_swap();
+        else {
+            input_update(P_ROTATE_CCW, delta_time, btn_left);
+            input_update(P_ROTATE_CW, delta_time, btn_right);
+            input_update(P_LEFT, delta_time, joystick_x < 0);
+            input_update(P_RIGHT, delta_time, joystick_x > 0);
+            input_update(P_SOFT_DROP, delta_time, joystick_y > 0);
+            input_update(P_HARD_DROP, delta_time, joystick_y < 0);
 
+            while (acc >= 50) {
+                int lines_cleared;
+                pentris_tick(&lines_cleared);
+                score_line_clear(lines_cleared);
+                acc -= 50;
+            }
+            
+            renderer_draw(buffer);
+        }
+
+        buffer = display_buffer_swap();
         prev_time = current_time;
         sleep_ms(3);
     }

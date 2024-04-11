@@ -7,7 +7,7 @@
 
 #include "hal/util.h"
 
-//memory mapping ADC is significantly more complicated
+//memory mapping ADC is significantly more complicated so we stick with this
 #define A2D_FILE_VOLTAGE5 "/sys/bus/iio/devices/iio:device0/in_voltage5_raw"
 #define A2D_FILE_VOLTAGE6 "/sys/bus/iio/devices/iio:device0/in_voltage6_raw"
 
@@ -55,6 +55,8 @@ void joystick_init() {
 
     joystick_thread_running = 1;
     pthread_create(&joystick_thread, NULL, joystick_thread_fn, NULL);
+
+    sleep_ms(5);
 }
 
 void joystick_cleanup() {

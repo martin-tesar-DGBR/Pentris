@@ -51,7 +51,7 @@ enum PentrisInput {
 void pentris_init();
 
 void pentris_input(enum PentrisInput input);
-void pentris_tick(int *num_lines_cleared, int *is_game_over);
+void pentris_tick(int *num_lines_cleared);
 
 int pentris_is_valid_placement(const uint8_t *piece_data, int size, int x, int y);
 
@@ -59,5 +59,7 @@ const enum PieceName *pentris_get_board();
 int pentris_get_piece_data(enum PieceName piece, enum Orientation orientation, uint8_t *dst);
 void pentris_get_piece(uint8_t *piece_data, enum PieceName *name, int *pos_x, int *pos_y, int *size);
 int pentris_get_queue(enum PieceName *queue, int max_capacity);
+
+int pentris_is_gameover();
 
 #endif

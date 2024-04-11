@@ -8,10 +8,11 @@
 
 #define QUEUE_CAPACITY (6 * NUM_PIECES)
 #define RANDOMIZER_90_BAG_LEN (5 * NUM_PIECES)
-#define TICKS_PER_GRAVITY 20
-//the visible "board" is 20 tiles high while the game extends the board above the visible play area
+#define TICKS_PER_GRAVITY 15
+//the game extends the board above the visible play area
 #define MATRIX_HEIGHT (2 * BOARD_HEIGHT)
 #define MATRIX_WIDTH BOARD_WIDTH
+#define PIECE_SPAWN_HEIGHT 20
 
 //dimensions for each piece
 const int piece_data_size[NUM_PIECES] = {
@@ -160,6 +161,8 @@ static int gravity_accumulator;
 #define HARD_DROP_MASK 0x20
 static uint8_t input_flags;
 
+static int is_gameover;
+
 //shuffles the 5 * 18 pieces and inserts them into the piece queue
 static void refill_queue() {
     //do not refill the queue if doing so will overflow the buffer
@@ -185,7 +188,7 @@ static void dequeue_piece() {
     //...xxx.... 3 wide piece
     int piece_size = piece_data_size[current_piece.name];
     current_piece.posX = (BOARD_WIDTH - piece_size) / 2;
-    current_piece.posY = 17 - piece_spawn_y_offset[current_piece.name];
+    current_piece.posY = PIECE_SPAWN_HEIGHT - piece_spawn_y_offset[current_piece.name];
     current_piece.orientation = NORTH;
     //we want at least the number of previews + 1 in the queue at all times (6 was chosen arbitrarily)
     if (queue_length < 6) {
@@ -195,6 +198,7 @@ static void dequeue_piece() {
 
 //can be used to reinitialize the game after it's been initialized once
 void pentris_init() {
+    is_gameover = 0;
     input_flags = 0;
 
     for (int i = 0; i < MATRIX_WIDTH * MATRIX_HEIGHT; i++) {
@@ -202,7 +206,7 @@ void pentris_init() {
     }
     
     //for debugging purposes the piece queue is deterministic on the seed, want to change it to use time on release
-    queue_rng_state = 27;
+    queue_rng_state = (uint32_t) get_time_ms();
     //fill queue with 5 of each piece
     for (int i = 0; i < RANDOMIZER_90_BAG_LEN; i++) {
         queuePieces[i] = i % NUM_PIECES;
@@ -399,9 +403,12 @@ static void rotate_cw() {
 }
 
 //there's a lot of output arguments but I think the names explain what they do
-void pentris_tick(int *num_lines_cleared, int *is_game_over) {
+void pentris_tick(int *num_lines_cleared) {
     //-1 for no value, 0 for piece placed, > 0 for number of lines cleared
     *num_lines_cleared = -1;
+    if (is_gameover) {
+        return;
+    }
 
     if (((input_flags & MOVE_LEFT_MASK) != 0) && ((input_flags & MOVE_RIGHT_MASK) == 0)) {
         move_left();
@@ -440,7 +447,9 @@ void pentris_tick(int *num_lines_cleared, int *is_game_over) {
     //check if the current piece is invalid (by spawning into another piece) and end the game if so
     uint8_t piece_data[MAX_PIECE_DATA_SIZE];
     int piece_size = pentris_get_piece_data(current_piece.name, current_piece.orientation, piece_data);
-    *is_game_over = !pentris_is_valid_placement(piece_data, piece_size, current_piece.posX, current_piece.posY);
+    if (!pentris_is_valid_placement(piece_data, piece_size, current_piece.posX, current_piece.posY)) {
+        is_gameover = 1;
+    }
 
     input_flags = 0;
 }
@@ -523,4 +532,8 @@ int pentris_get_queue(enum PieceName *dst, int max_capacity) {
         index = (index + 1) % QUEUE_CAPACITY;
     }
     return num_read;
+}
+
+int pentris_is_gameover() {
+    return is_gameover;
 }
