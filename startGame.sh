@@ -1,4 +1,4 @@
-cd pru/led_pru
+cd ../pru/led_pru
 make install_PRU1
 cd ../../
 echo "back to start"
