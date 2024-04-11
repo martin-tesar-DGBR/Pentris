@@ -4,6 +4,7 @@ project(pentris VERSION 1.0 DESCRIPTION "Pentris" LANGUAGES C)
 
 # Compiler options (inherited by sub-folders)
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_COMPILER "/usr/bin/arm-linux-gnueabihf-gcc")
 add_compile_options(-Wall -Werror -Wpedantic -Wextra)
 
 # Enable address sanitizer
