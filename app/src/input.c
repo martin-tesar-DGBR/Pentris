@@ -1,7 +1,5 @@
 #include "input.h"
 
-#include <stdio.h>
-
 #define HOLD_INPUT(acc_label, action, delta_time, das_interval, arr_interval, is_pressed) \
 do {\
     if (!is_pressed) {\
@@ -51,10 +49,6 @@ void input_init() {
     cw_pressed = 0;
     soft_drop_pressed = 0;
     hard_drop_pressed = 0;
-}
-
-void input_cleanup() {
-
 }
 
 void input_update(enum PentrisInput input, long long delta_time, int is_pressed) {

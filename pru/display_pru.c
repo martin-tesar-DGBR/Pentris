@@ -24,7 +24,7 @@ volatile register uint32_t __R31;   // input GPIO register
 #define LAT_MASK (1 << 1)
 #define OE_MASK  (1 << 0)
 
-#define CYCLE_WAIT (500 / 5) //500ns, used for pulsing clock
+#define CYCLE_WAIT (250 / 5) //500ns, used for pulsing clock
 #define BRIGHTNESS_WAIT (15000/ 5) //2000ns, how long to keep the lights on until next frame (longer = brighter)
 
 // Shared Memory Configuration
@@ -69,9 +69,20 @@ static void ledMatrix_setColourTop(uint8_t colour, int frame) {
     uint8_t red_col = (colour & RED_MASK) >> 5;
     uint8_t green_col = (colour & GREEN_MASK) >> 2;
     uint8_t blue_col = (colour & BLUE_MASK);
-    char red_val = frame % 8 < red_col ? 1 : 0;
-    char green_val = frame % 8 < green_col ? 1 : 0;
-    char blue_val = frame % 4 < blue_col ? 1 : 0;
+    char red_mod, green_mod, blue_mod;
+    if (colour == 0x25) {
+        red_mod = 14;
+        green_mod = 14;
+        blue_mod = 14;
+    }
+    else {
+        red_mod = 8;
+        green_mod = 8;
+        blue_mod = 4;
+    }
+    char red_val = frame % red_mod < red_col ? 1 : 0;
+    char green_val = frame % green_mod < green_col ? 1 : 0;
+    char blue_val = frame % blue_mod < blue_col ? 1 : 0;
 
     // Write on the colour pins
     set_mask(R1_MASK, red_val);
@@ -89,9 +100,20 @@ static void ledMatrix_setColourBottom(uint8_t colour, int frame) {
     uint8_t red_col = (colour & RED_MASK) >> 5;
     uint8_t green_col = (colour & GREEN_MASK) >> 2;
     uint8_t blue_col = (colour & BLUE_MASK);
-    char red_val = frame % 8 < red_col ? 1 : 0;
-    char green_val = frame % 8 < green_col ? 1 : 0;
-    char blue_val = frame % 4 < blue_col ? 1 : 0;
+    char red_mod, green_mod, blue_mod;
+    if (colour == 0x25) {
+        red_mod = 14;
+        green_mod = 14;
+        blue_mod = 14;
+    }
+    else {
+        red_mod = 8;
+        green_mod = 8;
+        blue_mod = 4;
+    }
+    char red_val = frame % red_mod < red_col ? 1 : 0;
+    char green_val = frame % green_mod < green_col ? 1 : 0;
+    char blue_val = frame % blue_mod < blue_col ? 1 : 0;
 
     // Write on the colour pins
     set_mask(R2_MASK, red_val);
@@ -99,6 +121,7 @@ static void ledMatrix_setColourBottom(uint8_t colour, int frame) {
     set_mask(B2_MASK, blue_val);
 }
 
+//draws all 0s to display when buffer is NULL (so you don't get blinded when the program shuts down)
 static void display_draw(volatile uint8_t *buffer) {
     for (int rowNum = 0; rowNum < DISPLAY_ROWS / 2; rowNum++) {
         __R30 |= OE_MASK;
@@ -134,8 +157,14 @@ void main(void) {
     pSharedMemStruct->pru_screen_used = true;
     pSharedMemStruct->screen_available = false;
     for (int i = 0; i < DISPLAY_ROWS * DISPLAY_COLS; i++) {
-        pSharedMemStruct->buf[0][i] = 0xFF;
-        pSharedMemStruct->buf[1][i] = 0xFF;
+        int row = i / DISPLAY_COLS;
+        int col = i % DISPLAY_COLS;
+        int red = col % 8;
+        int green = row % 8;
+        int blue = col / 8;
+        int colour = (red << 5) | (green << 2) | blue;
+        pSharedMemStruct->buf[0][i] = colour;
+        pSharedMemStruct->buf[1][i] = colour;
     }
 
     while (pSharedMemStruct->linux_display_running) {

@@ -1,71 +1,95 @@
 #include "hal/joystick.h"
 
-#include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
+#include <stdlib.h>
+#include <stdatomic.h>
+#include <pthread.h>
 
 #include "hal/util.h"
 
-static void joystick_write() {
-    file_write(JSUP_PIN "direction", "in");
-    file_write(JSRT_PIN "direction", "in");
-    file_write(JSDN_PIN "direction", "in");
-    file_write(JSLFT_PIN "direction", "in");
-    file_write(JSPB_PIN "direction", "in");
+//memory mapping ADC is significantly more complicated so we stick with this
+#define A2D_FILE_VOLTAGE5 "/sys/bus/iio/devices/iio:device0/in_voltage5_raw"
+#define A2D_FILE_VOLTAGE6 "/sys/bus/iio/devices/iio:device0/in_voltage6_raw"
 
-    file_write(JSUP_PIN "active_low", "0");
-    file_write(JSRT_PIN "active_low", "0");
-    file_write(JSDN_PIN "active_low", "0");
-    file_write(JSLFT_PIN "active_low", "0");
-    file_write(JSPB_PIN "active_low", "0");
+#define JOYSTICK_CENTER_VALUE 1624
+#define JOYSTICK_THRESHOLD 600
+
+static atomic_int joystick_thread_running;
+static pthread_t joystick_thread;
+static atomic_int joystick_x = 0;
+static atomic_int joystick_y = 0;
+
+static FILE *js_x_fd;
+static FILE *js_y_fd;
+
+static void *joystick_thread_fn(void *args) {
+    #define BUFFER_SIZE 32
+    char buffer[BUFFER_SIZE];
+    while (joystick_thread_running) {
+        fseek(js_x_fd, 0, SEEK_SET);
+        int num_read = fread(buffer, sizeof(char), BUFFER_SIZE, js_x_fd);
+        buffer[num_read] = '\0';
+        joystick_x = atoi(buffer);
+
+        fseek(js_y_fd, 0, SEEK_SET);
+        num_read = fread(buffer, sizeof(char), BUFFER_SIZE, js_y_fd);
+        buffer[num_read] = '\0';
+        joystick_y = atoi(buffer);
+        sleep_ms(10);
+    }
+    return args;
 }
 
 void joystick_init() {
-    //setting joystick pins to GPIO using config-pin
-    run_command("config-pin p8_14 gpio");
-    run_command("config-pin p8_15 gpio");
-    run_command("config-pin p8_16 gpio");
-    run_command("config-pin p8_18 gpio");
-    run_command("config-pin p8_17 gpio");
-
-    joystick_write();
-    sleep_ms(300);
-}
-
-JoystickInput joystick_get_input() {
-    JoystickInput acc = NO_DIRECTION;
-
-    const int MAX_LENGTH = 16;
-    char buff[MAX_LENGTH];
-    file_read(JSUP_PIN "value", buff, MAX_LENGTH);
-    if (strncmp(buff, "0", 1) == 0) {
-        acc |= JS_UP;
+    js_x_fd = fopen(A2D_FILE_VOLTAGE5, "r");
+    if (!js_x_fd) {
+        perror("Could not open file for joystick x");
+        exit(1);
     }
 
-    file_read(JSRT_PIN "value", buff, MAX_LENGTH);
-    if (strncmp(buff, "0", 1) == 0) {
-        acc |= JS_RIGHT;
+    js_y_fd = fopen(A2D_FILE_VOLTAGE6, "r");
+    if (!js_y_fd) {
+        perror("Could not open file for joystick y");
+        exit(1);
     }
 
-    file_read(JSDN_PIN "value", buff, MAX_LENGTH);
-    if (strncmp(buff, "0", 1) == 0) {
-        acc |= JS_DOWN;
-    }
+    joystick_thread_running = 1;
+    pthread_create(&joystick_thread, NULL, joystick_thread_fn, NULL);
 
-    file_read(JSLFT_PIN "value", buff, MAX_LENGTH);
-    if (strncmp(buff, "0", 1) == 0) {
-        acc |= JS_LEFT;
-    }
-
-    file_read(JSPB_PIN "value", buff, MAX_LENGTH);
-    if (strncmp(buff, "0", 1) == 0) {
-        acc |= JS_PUSHED;
-    }
-
-    return acc;
+    sleep_ms(5);
 }
 
 void joystick_cleanup() {
+    joystick_thread_running = 0;
+    pthread_join(joystick_thread, NULL);
 
+    fclose(js_x_fd);
+    fclose(js_y_fd);
+}
+
+void joystick_read(int *x, int *y) {
+    int js_x = joystick_x;
+    int js_y = joystick_y;
+    if (x != NULL) {
+        if (js_x - JOYSTICK_CENTER_VALUE > JOYSTICK_THRESHOLD) {
+            *x = 1;
+        }
+        else if (js_x - JOYSTICK_CENTER_VALUE < -JOYSTICK_THRESHOLD) {
+            *x = -1;
+        }
+        else {
+            *x = 0;
+        }
+    }
+    if (y != NULL) {
+        if (js_y - JOYSTICK_CENTER_VALUE > JOYSTICK_THRESHOLD) {
+            *y = 1;
+        }
+        else if (js_y - JOYSTICK_CENTER_VALUE < -JOYSTICK_THRESHOLD) {
+            *y = -1;
+        }
+        else {
+            *y = 0;
+        }
+    }
 }
