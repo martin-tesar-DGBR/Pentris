@@ -6,12 +6,14 @@
 #include "input.h"
 #include "score.h"
 #include "renderer.h"
+#include "tune_thread.h"
 
 #include "hal/gpio.h"
 #include "hal/button.h"
 #include "hal/joystick.h"
 #include "hal/display_linux.h"
 #include "hal/util.h"
+#include "hal/buzzer.h"
 
 #define GAMEOVER_WAIT_INPUT 3000
 
@@ -23,11 +25,13 @@ int main() {
     pentris_init();
     input_init();
     score_init();
+    buzzerInit();
 
     long long prev_time = get_time_ms();
     long long acc = 0;
 
     int is_running = 1;
+    startThread(); // starts background tune
     while (is_running) {
         long long current_time = get_time_ms();
         long long delta_time = current_time - prev_time;
@@ -75,7 +79,7 @@ int main() {
         prev_time = current_time;
         sleep_ms(3);
     }
-
+    endLoop();
     joystick_cleanup();
     gpio_cleanup();
     display_cleanup();
