@@ -25,13 +25,15 @@ int main() {
     pentris_init();
     input_init();
     score_init();
-    buzzerInit();
+    #ifdef PLAY_MUSIC
+    buzzer_init();
+    tune_init(); // starts background tune
+    #endif
 
     long long prev_time = get_time_ms();
     long long acc = 0;
 
     int is_running = 1;
-    startThread(); // starts background tune
     while (is_running) {
         long long current_time = get_time_ms();
         long long delta_time = current_time - prev_time;
@@ -79,7 +81,9 @@ int main() {
         prev_time = current_time;
         sleep_ms(3);
     }
-    endLoop();
+    #ifdef PLAY_MUSIC
+    tune_cleanup();
+    #endif
     joystick_cleanup();
     gpio_cleanup();
     display_cleanup();

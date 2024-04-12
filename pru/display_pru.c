@@ -24,7 +24,7 @@ volatile register uint32_t __R31;   // input GPIO register
 #define LAT_MASK (1 << 1)
 #define OE_MASK  (1 << 0)
 
-#define CYCLE_WAIT (250 / 5) //500ns, used for pulsing clock
+#define CYCLE_WAIT (300 / 5) //500ns, used for pulsing clock
 #define BRIGHTNESS_WAIT (15000/ 5) //2000ns, how long to keep the lights on until next frame (longer = brighter)
 
 // Shared Memory Configuration

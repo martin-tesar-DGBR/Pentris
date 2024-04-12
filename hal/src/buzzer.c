@@ -2,51 +2,44 @@
 #define BUZZER_C
 
 #include "hal/buzzer.h"
-#include "hal/util.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <time.h>
 
-//provided by prof
-/*
-static void sleepForMs(long long delayInMs){
-    const long long NS_PER_MS = 1000 * 1000;
-    const long long NS_PER_SECOND = 1000000000;
-    long long delayNs = delayInMs * NS_PER_MS;
-    int seconds = delayNs / NS_PER_SECOND;
-    int nanoseconds = delayNs % NS_PER_SECOND;
-    struct timespec reqDelay = {seconds, nanoseconds};
-    nanosleep(&reqDelay, (struct timespec *) NULL);
-}
-*/
+#include "hal/util.h"
 
-void setPeriod(char* newPeriod){
-    FILE *buzzFile = fopen("/dev/bone/pwm/0/a/period", "w");
-    fprintf(buzzFile, newPeriod);
-    fclose(buzzFile);
-}
-
-void setDutyCycle(char* newCycle){
-    FILE *buzzFile = fopen("/dev/bone/pwm/0/a/duty_cycle", "w");
-    fprintf(buzzFile, newCycle);
-    fclose(buzzFile);
-
+void buzzer_set_period(uint64_t period) {
+    if (period == 0) {
+        buzzer_disable();
+        return;
+    }
+    
+    FILE *period_file = fopen("/dev/bone/pwm/0/a/period", "w");
+    FILE *dc_file = fopen("/dev/bone/pwm/0/a/duty_cycle", "w");
+    fprintf(dc_file, "0");
+    sleep_ms(5);
+    fprintf(period_file, "%llu", period);
+    fprintf(dc_file, "%llu", period / 2);
+    buzzer_enable();
+    fclose(period_file);
+    fclose(dc_file);
 }
 
-void enable(void){
+void buzzer_enable(void){
     FILE *buzzFile = fopen("/dev/bone/pwm/0/a/enable", "w");
     fprintf(buzzFile, "1");
     fclose(buzzFile);
 }
 
-void disable(void){
+void buzzer_disable(void){
     FILE *buzzFile = fopen("/dev/bone/pwm/0/a/enable", "w");
     fprintf(buzzFile, "0");
     fclose(buzzFile);
 }
 
-void buzzerInit(void){
+void buzzer_init(void){
     run_command("config-pin p9_22 pwm");
 }
 

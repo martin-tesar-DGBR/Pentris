@@ -1,37 +1,53 @@
 #include "hal/buzzer.h"
 #include "hal/util.h"
+#include "hal/music.h"
 #include <stdatomic.h>
 #include <pthread.h>
 
-char *periods[] = {"1000000", "0", "1000000", "0", "1250000", "1500000", "1250000", "1000000", 
-                    "900000", "800000", "0", "1250000", "1000000", "2000000", "3000000", "4000000", 
-                    "3000000", "2000000"};
-
-char *cycles[] = {"500000", "0", "500000", "0", "625000", "750000", "625000", "500000", "450000", 
-                "400000", "0", "625000", "500000", "1000000", "1500000", "2000000", "1500000", "1000000"};
-
+struct Note melody[] = {
+    {E4, NOTE_4}, {B3, NOTE_8}, {C4, NOTE_8}, {D4, NOTE_4}, {C4, NOTE_8}, {B3, NOTE_8},
+    {A3, NOTE_4}, {A3, NOTE_8}, {C4, NOTE_8}, {E4, NOTE_4}, {D4, NOTE_8}, {C4, NOTE_8},
+    {B3, NOTE_4 + NOTE_8}, {C4, NOTE_8}, {D4, NOTE_4}, {E4, NOTE_4},
+    {C4, NOTE_4}, {A3, NOTE_4}, {A3, NOTE_4}, {0, NOTE_4 + NOTE_8},
+     {D4, NOTE_4}, {F4, NOTE_8}, {A3 >> 1, NOTE_4}, {G4, NOTE_8}, {F4, NOTE_8},
+    {E4, NOTE_4 + NOTE_8}, {C4, NOTE_8}, {E4, NOTE_4}, {D4, NOTE_8}, {C4, NOTE_8},
+    {B3, NOTE_4 + NOTE_8}, {C4, NOTE_8}, {D4, NOTE_4}, {E4, NOTE_4},
+    {C4, NOTE_4}, {A3, NOTE_4}, {A3, NOTE_4}, {0, NOTE_4},
+    {E4, NOTE_2}, {C4, NOTE_2},
+    {D4, NOTE_2}, {B3, NOTE_2},
+    {C4, NOTE_2}, {A3, NOTE_2},
+    {Afl3, NOTE_1 - NOTE_4}, {0, NOTE_4},
+    {E4, NOTE_2}, {C4, NOTE_2},
+    {D4, NOTE_2}, {B3, NOTE_2},
+    {C4, NOTE_4}, {E4, NOTE_4}, {A3 >> 1, NOTE_4}, {A3 >> 1, NOTE_4},
+    {Afl3 >> 1, NOTE_1 - NOTE_4}, {0, NOTE_4}
+};
+#define NUM_NOTES (sizeof(melody) / sizeof(*melody))
+#define BPM 180
 
 static _Atomic int cont = 1;
 static pthread_t tuneThread;
 
-void *tuneLoop(void * args){
-    enable();
+static void *tuneLoop(void *args){
+    int curr_note = 0;
+    buzzer_enable();
     while(cont == 1){
-        for(int i = 0; i < 18 && cont == 1; i++){
-            setPeriod(periods[i]);
-            setDutyCycle(cycles[i]);
-            sleep_ms(300);
-        }
+        struct Note note = melody[curr_note];
+        buzzer_set_period(note.period >> 1);
+        curr_note = (curr_note + 1) % NUM_NOTES;
+        sleep_ms(MEASURE_TO_MS(note.duration, BPM));
     }
 
-    disable();
     return args;
 }
 
-void endLoop(void){
+void tune_cleanup(void){
     cont = 0;
+    pthread_join(tuneThread, NULL);
+
+    buzzer_disable();
 }
 
-void startThread(void){
+void tune_init(void){
     pthread_create(&tuneThread, NULL, tuneLoop, NULL);
 }

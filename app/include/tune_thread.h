@@ -1,13 +1,12 @@
 #ifndef TUNE_THREAD_H
 #define TUNE_THREAD_H
 
-//this will be the main loop of the thread
-void *tuneLoop(void);
+//starts the thread
+void tune_init(void);
 
 //sends signal to end the loop
-void endLoop(void);
+void tune_cleanup(void);
 
-//starts the thread
-void startThread(void);
+
 
 #endif

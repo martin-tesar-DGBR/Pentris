@@ -1,16 +1,12 @@
 #ifndef BUZZER_H
 #define BUZZER_H
-//provided by prof
-//static void sleepForMs(long long delayInMs);
 
-void setPeriod(char* newPeriod);
+#include <stdint.h>
 
-void setDutyCycle(char* newCycle);
+void buzzer_init(void);
 
-void enable(void);
-
-void disable(void);
-
-void buzzerInit(void);
+void buzzer_set_period(uint64_t period);
+void buzzer_enable(void);
+void buzzer_disable(void);
 
 #endif
