@@ -1,7 +1,7 @@
 #ifndef BUZZER_H
 #define BUZZER_H
 //provided by prof
-static void sleepForMs(long long delayInMs);
+//static void sleepForMs(long long delayInMs);
 
 void setPeriod(char* newPeriod);
 

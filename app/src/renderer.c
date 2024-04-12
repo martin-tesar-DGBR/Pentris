@@ -42,6 +42,7 @@ uint8_t piece_colours[NUM_PIECES + 2] = {
 #define SCORE_COLOUR 0xFF
 
 #define GAMEOVER_COLOUR 0xF1
+#define GAMEOVER_READY_COLOUR 0x6F
 
 uint8_t score_digit[10][SCORE_DIGIT_WIDTH * SCORE_DIGIT_HEIGHT] = {
     {
@@ -89,9 +90,9 @@ uint8_t score_digit[10][SCORE_DIGIT_WIDTH * SCORE_DIGIT_HEIGHT] = {
     {
         0, 1, 1,
         1, 0, 0,
-        1, 1, 1,
+        1, 1, 0,
         1, 0, 1,
-        1, 1, 1
+        0, 1, 1
     },
     {
         1, 1, 1,
@@ -103,7 +104,7 @@ uint8_t score_digit[10][SCORE_DIGIT_WIDTH * SCORE_DIGIT_HEIGHT] = {
     {
         1, 1, 0,
         1, 0, 1,
-        1, 1, 1,
+        0, 1, 0,
         1, 0, 1,
         0, 1, 1
     },
@@ -245,7 +246,7 @@ void renderer_draw_gameover(volatile uint8_t *buffer, int ms_elapsed) {
 
     uint8_t separator_colour;
     if (ms_elapsed > GAMEOVER_WAIT_INPUT) {
-        separator_colour = 0x6F;
+        separator_colour = GAMEOVER_READY_COLOUR;
     }
     else {
         separator_colour = GAMEOVER_COLOUR;
