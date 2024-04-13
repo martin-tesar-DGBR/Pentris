@@ -38,7 +38,7 @@ typedef struct {
     uint8_t pru_buffer_use; 
     bool linux_display_running;
     bool pru_screen_used; //signal when PRU is finished drawing the front buffer
-    bool screen_available; //signal from linux when done drawing on the back buffer, reset by PRU
+    bool linux_screen_available; //signal from linux when done drawing on the back buffer, reset by PRU
 } sharedMemStruct_t;
 
 #endif

@@ -1,7 +1,10 @@
+//interface for interacting with GPIO pins
 #ifndef _GPIO_H_
 #define _GPIO_H_
 
 //pins found using command "gpioinfo | less"
+//the reason it looks wack is because it is wack
+//it's like the manufacturer randomly assigned the numbers to their corresponding pin
 
 enum GPIOPin {
     P9_22 = 2,
@@ -87,8 +90,12 @@ enum GPIODirection {
     GPIO_out
 };
 
+//the caller must set up the pins themselves like so:
+//run_command("config-pin <pin name> gpio");
 void gpio_init();
 void gpio_cleanup();
+
+#define gpio_config_pin(pin) run_command("config-pin " #pin " gpio")
 
 void gpio_set_direction(enum GPIOPin pin, enum GPIODirection direction);
 int gpio_read(enum GPIOPin pin);

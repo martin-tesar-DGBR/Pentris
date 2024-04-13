@@ -6,6 +6,8 @@
 #define MAX_SCORE 10000
 //points per line cleared: inf, 15, 22.5, 30, 45, 60
 //0 lines cleared <-> 1 point for placing a piece
+//score is multiplied by combo
+//(normal initially, 2 times for 2/3 consecutive clears, 3 times for 4/5 consecutive clears, etc.)
 static const int line_clear_scores[MAX_LINE_CLEAR + 1] = {1, 15, 45, 90, 180, 300};
 
 static int score = 0;

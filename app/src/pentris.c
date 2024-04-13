@@ -6,7 +6,7 @@
 
 #include "hal/util.h"
 
-#define QUEUE_CAPACITY (6 * NUM_PIECES)
+#define QUEUE_CAPACITY (7 * NUM_PIECES)
 #define RANDOMIZER_90_BAG_LEN (5 * NUM_PIECES)
 #define TICKS_PER_GRAVITY 15
 //the game extends the board above the visible play area
@@ -135,11 +135,13 @@ const uint8_t pieces[NUM_PIECES][MAX_PIECE_DATA_SIZE] = {
 };
 
 
-//board is ordered in this fashion:
+//board is ordered in row major order:
 // ...
 // 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
 // 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
 //  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
+//
+//index (row, col) -> row * MATRIX_WIDTH + col
 static enum PieceName board[MATRIX_WIDTH * MATRIX_HEIGHT];
 static piece_t current_piece;
 //information to randomize pieces
@@ -190,8 +192,8 @@ static void dequeue_piece() {
     current_piece.posX = (BOARD_WIDTH - piece_size) / 2;
     current_piece.posY = PIECE_SPAWN_HEIGHT - piece_spawn_y_offset[current_piece.name];
     current_piece.orientation = NORTH;
-    //we want at least the number of previews + 1 in the queue at all times (6 was chosen arbitrarily)
-    if (queue_length < 6) {
+    //we want at least the number of previews + 1 in the queue at all times (18 is overkill)
+    if (queue_length < NUM_PIECES) {
         refill_queue();
     }
 }
@@ -205,7 +207,7 @@ void pentris_init() {
         board[i] = EMPTY_PIECE;
     }
     
-    //for debugging purposes the piece queue is deterministic on the seed, want to change it to use time on release
+    //for debugging purposes the piece queue is deterministic on the seed, we want to use time on release
     queue_rng_state = (uint32_t) get_time_ms();
     //fill queue with 5 of each piece
     for (int i = 0; i < RANDOMIZER_90_BAG_LEN; i++) {
@@ -300,6 +302,8 @@ static int move_down() {
 
 //returns the number of cleared lines while clearing lines
 static int clear_lines() {
+    //find the full rows (there are at most 5 in a normal game, but
+    //can be extended arbitrarily with a dynamically sized array)
     int full_rows[5];
     int num_full_rows = 0;
     for (int row = 0; row < MATRIX_HEIGHT; row++) {

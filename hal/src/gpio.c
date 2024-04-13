@@ -7,6 +7,8 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 
+//memory mapped GPIO implementation
+
 //see https://www.ti.com/lit/ug/spruh73q/spruh73q.pdf tables 2-3 and 25-5
 #define GPIO0_BASE_ADDRESS 0x44E07000
 #define GPIO1_BASE_ADDRESS 0x4804C000
@@ -45,6 +47,8 @@ static int gpio_get_index(enum GPIOPin pin) {
 }
 
 void gpio_init() {
+    //it may have been better on space mapped if there were separate maps for each address space
+    //but I don't know quite enough about mmap and paging to determine if it's actually better
     int fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (fd == -1) {
         perror("Could not open /dev/mem");

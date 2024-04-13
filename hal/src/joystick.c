@@ -12,7 +12,7 @@
 #define A2D_FILE_VOLTAGE6 "/sys/bus/iio/devices/iio:device0/in_voltage6_raw"
 
 #define JOYSTICK_CENTER_VALUE 1624
-#define JOYSTICK_THRESHOLD 600
+#define JOYSTICK_THRESHOLD 1000
 
 static atomic_int joystick_thread_running;
 static pthread_t joystick_thread;

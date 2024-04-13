@@ -1,3 +1,4 @@
+//interface for using buzzer
 #ifndef BUZZER_H
 #define BUZZER_H
 

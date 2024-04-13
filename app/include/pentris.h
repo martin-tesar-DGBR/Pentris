@@ -1,3 +1,4 @@
+//module for the game state and logic itself
 #ifndef _PENTRIS_H_
 #define _PENTRIS_H_
 
@@ -36,16 +37,11 @@ typedef struct Piece {
     enum Orientation orientation;
 } piece_t;
 
-//dimensions of the respective piece data for the purpose of data storage and rotation
-extern const int piece_data_size[NUM_PIECES];
-
-extern const uint8_t pieces[NUM_PIECES][MAX_PIECE_DATA_SIZE];
-
 enum PentrisInput {
     P_LEFT, P_RIGHT,
     P_ROTATE_CCW, P_ROTATE_CW,
     P_SOFT_DROP, P_HARD_DROP,
-    //P_HOLD
+    //P_HOLD (we don't have enough space on the attached breadboard for a third button)
 };
 
 void pentris_init();

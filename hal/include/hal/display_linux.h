@@ -1,3 +1,4 @@
+//interface with PRU display
 #ifndef _DISPLAY_LINUX_H_
 #define _DISPLAY_LINUX_H_
 

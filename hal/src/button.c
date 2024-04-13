@@ -6,9 +6,9 @@
 #include "hal/util.h"
 
 void button_init() {
-    run_command("config-pin p9.15 gpio");
-    run_command("config-pin p9.16 gpio");
-    run_command("config-pin p9.42 gpio");
+    gpio_config_pin(P9_15);
+    gpio_config_pin(P9_16);
+    gpio_config_pin(P9_42);
 
     gpio_set_direction(P9_42, GPIO_out);
     gpio_set_direction(P9_15, GPIO_in);

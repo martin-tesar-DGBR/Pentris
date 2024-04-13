@@ -15,6 +15,8 @@
 #include "hal/util.h"
 #include "hal/buzzer.h"
 
+//#define PLAY_MUSIC
+
 #define GAMEOVER_WAIT_INPUT 3000
 
 int main() {

@@ -60,7 +60,7 @@ void display_cleanup() {
 
 //swap out the drawn frame given by either this function or init for a new one
 volatile uint8_t *display_buffer_swap() {
-    pSharedMemStruct->screen_available = true;
+    pSharedMemStruct->linux_screen_available = true;
     //wait for the PRU to finish with the current frame
     while (!pSharedMemStruct->pru_screen_used);
     return pSharedMemStruct->buf[BUFFER_USE_TO_LINUX(pSharedMemStruct->pru_buffer_use)];

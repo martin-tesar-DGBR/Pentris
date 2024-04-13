@@ -1,3 +1,4 @@
+//module for random number generation (to pay homage to NES Tetris)
 #ifndef _RANDOM_H_
 #define _RANDOM_H_
 

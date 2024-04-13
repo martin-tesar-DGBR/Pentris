@@ -1,3 +1,4 @@
+//module for smooth input handling
 #ifndef _INPUT_H_
 #define _INPUT_H_
 

@@ -244,23 +244,23 @@ void renderer_draw_gameover(volatile uint8_t *buffer, int ms_elapsed) {
 
     draw_main(buffer);
 
-    uint8_t separator_colour;
+    uint8_t colour;
     if (ms_elapsed > GAMEOVER_WAIT_INPUT) {
-        separator_colour = GAMEOVER_READY_COLOUR;
+        colour = GAMEOVER_READY_COLOUR;
     }
     else {
-        separator_colour = GAMEOVER_COLOUR;
+        colour = GAMEOVER_COLOUR;
     }
 
     //separators
     if (ms_elapsed > GAMEOVER_WAIT_INPUT || ms_elapsed % GAMEOVER_FLASH_PERIOD_MS < GAMEOVER_FLASH_PERIOD_MS / 2) {
         //vertical separator
         for (int i = 0; i < SEPARATOR_LENGTH_VERTICAL; i++) {
-            set_pixel(buffer, i, PREVIEW_HORIZONTAL_OFFSET - 1, separator_colour);
+            set_pixel(buffer, i, PREVIEW_HORIZONTAL_OFFSET - 1, colour);
         }
         //horizontal separator
         for (int i = PREVIEW_HORIZONTAL_OFFSET; i < DISPLAY_ROWS; i++) {
-            set_pixel(buffer, SEPARATOR_LENGTH_VERTICAL - 1, i, separator_colour);
+            set_pixel(buffer, SEPARATOR_LENGTH_VERTICAL - 1, i, colour);
         }
     }
 
@@ -274,7 +274,7 @@ void renderer_draw_gameover(volatile uint8_t *buffer, int ms_elapsed) {
                 int vertical_offset = SCORE_VERTICAL_OFFSET + SCORE_DIGIT_HEIGHT - 1 - i;
                 int horizontal_offset = (index * 4) + j;
                 if (raster[i * SCORE_DIGIT_WIDTH + j]) {
-                    set_pixel(buffer, vertical_offset, horizontal_offset, separator_colour);
+                    set_pixel(buffer, vertical_offset, horizontal_offset, colour);
                 }
             }
         }
