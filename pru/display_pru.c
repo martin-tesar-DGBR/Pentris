@@ -24,8 +24,8 @@ volatile register uint32_t __R31;   // input GPIO register
 #define LAT_MASK (1 << 1)
 #define OE_MASK  (1 << 0)
 
-#define CYCLE_WAIT (300 / 5) //500ns, used for pulsing clock
-#define BRIGHTNESS_WAIT (15000/ 5) //2000ns, how long to keep the lights on until next frame (longer = brighter)
+#define CYCLE_WAIT (300 / 5) //300ns, used for pulsing clock
+#define BRIGHTNESS_WAIT (15000/ 5) //15000ns, how long to keep the lights on until next frame (longer = brighter)
 
 //used for colour 0x25, corresponding to 12.5% red, 12.5% green, 25% blue
 //we wanted a way to make a darkish gray (as dark as an LED allows at least) so this colour is reserved
