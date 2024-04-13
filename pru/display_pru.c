@@ -134,7 +134,6 @@ static void set_colour_bottom(uint8_t colour, int frame) {
 static void display_draw(volatile uint8_t *buffer) {
     for (int rowNum = 0; rowNum < DISPLAY_ROWS / 2; rowNum++) {
         __R30 |= OE_MASK;
-        __delay_cycles(CYCLE_WAIT);
         set_row(rowNum);
         __delay_cycles(CYCLE_WAIT);
         for (int colNum = 0; colNum < DISPLAY_COLS; colNum++) {
@@ -151,7 +150,6 @@ static void display_draw(volatile uint8_t *buffer) {
         __R30 |= LAT_MASK;
         __delay_cycles(CYCLE_WAIT);
         __R30 &= ~LAT_MASK;
-        __delay_cycles(CYCLE_WAIT);
         __R30 &= ~OE_MASK;
         __delay_cycles(BRIGHTNESS_WAIT);
     }
