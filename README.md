@@ -9,3 +9,6 @@ An implementation of a pentomino block stacking game on a BeagleBone Green.
 - Navigate to `/mnt/remote/myApps` and run `sudo ./pentris`
 
 The `startGame.sh` file should be copied manually into `myApps` to automate starting the program.
+
+## Demo
+![demo.png](https://github.com/martin-tesar-DGBR/Pentris/blob/master/example/demo.png?raw=true)
